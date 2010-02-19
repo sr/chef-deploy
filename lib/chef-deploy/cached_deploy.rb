@@ -131,17 +131,20 @@ class CachedDeploy
     Chef::Log.info "symlinking and finishing deploy"
     symlink = false
     begin
-      chef_run [ "chmod -R g+w #{release_to_link}",
-            "rm -rf #{release_to_link}/log #{release_to_link}/public/system #{release_to_link}/tmp/pids",
-            "mkdir -p #{release_to_link}/tmp",
-            "ln -nfs #{shared_path}/log #{release_to_link}/log",
-            "mkdir -p #{release_to_link}/public",
-            "mkdir -p #{release_to_link}/config",
-            "ln -nfs #{shared_path}/system #{release_to_link}/public/system",
-            "ln -nfs #{shared_path}/pids #{release_to_link}/tmp/pids",
-            "ln -nfs #{shared_path}/config/database.yml #{release_to_link}/config/database.yml",
-            "chown -R #{user}:#{group} #{release_to_link}"
-          ].join(" && ")
+      chef_run <<-EOS
+        chmod -R g+w #{release_to_link} &&
+        rm -rf #{release_to_link}/log #{release_to_link}/public/system #{release_to_link}/tmp/pids &&
+        mkdir -p #{release_to_link}/tmp &&
+        ln -nfs #{shared_path}/log #{release_to_link}/log &&
+        mkdir -p #{release_to_link}/public &&
+        mkdir -p #{release_to_link}/config &&
+        ln -nfs #{shared_path}/system #{release_to_link}/public/system &&
+        ln -nfs #{shared_path}/pids #{release_to_link}/tmp/pids &&
+        #{if File.directory?(file = "#{release_to_link}/config/database.yml") then
+          "ln -nfs #{shared_path}/config/database.yml #{file} &&"
+        end}
+        chown -R #{user}:#{group} #{release_to_link}
+      EOS
 
       symlink = true
       chef_run "rm -f #{current_path} && ln -nfs #{release_to_link} #{current_path} && chown -R #{user}:#{group} #{current_path}"
